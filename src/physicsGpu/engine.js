@@ -183,14 +183,27 @@ class Engine{
                 { binding: 1, resource: { buffer: this.corrBuffer } },  
             ],
         });
+
+        this.bindGroupVelocityUpdate = this.device.createBindGroup({
+          label: 'bindGroup for velocity update',
+          layout: this.pipelineVelocityUpdate.getBindGroupLayout(0),
+          entries: [
+              { binding: 0, resource: { buffer: this.posIOBuffer } },  
+              { binding: 1, resource: { buffer: this.posBuffer } }, 
+              { binding: 2, resource: { buffer: this.prePosBuffer } }, 
+              { binding: 3, resource: { buffer: this.velBuffer } },        
+              { binding: 4, resource: { buffer: this.massBuffer } },      
+          ],
+      });
     }
 
-    gpuCompute(pipeline, bindGroup, len){
-        const encoder = this.device.createCommandEncoder({
-            label: 'encoder',
-        });
+    gpuCompute(encoder, pipeline, bindGroup, len){
+        
+      const encoder2 = this.device.createCommandEncoder({
+        label: 'encoder',
+      });
     
-        const computePass = encoder.beginComputePass({
+        const computePass = encoder2.beginComputePass({
             label: 'compute pass',
         });
     
@@ -199,44 +212,46 @@ class Engine{
         computePass.dispatchWorkgroups(len);
         computePass.end();
 
-        return encoder
+        return encoder2
     }
 
     async simulate(dt, force){
         let pi, o1, o2 ;
         let o = this.objects[0]
+        /*const encoder = this.device.createCommandEncoder({
+            label: 'encoder',
+        });*/
         let encoder;
         let cl = o.graphColoringLimits;
-        for(var t = 70; t < 100; t++){
+        for(var t = 0; t < 100; t++){
             
-            encoder = this.gpuCompute(this.pipelineIterate, this.bindGroupIterate, Math.ceil(o.pos.length/3 / 64))
+            encoder = this.gpuCompute(encoder, this.pipelineIterate, this.bindGroupIterate, Math.ceil(o.pos.length/3 / 64))
             this.device.queue.submit([encoder.finish()]);
 
             this.device.queue.writeBuffer(this.bufferGraphColoringLimits, 0, cl[0]);
-            encoder = this.gpuCompute(this.pipelineConstraints, this.bindGroupConstraints, Math.ceil(cl[0][1]- cl[0][0] / 64))
+            encoder = this.gpuCompute(encoder, this.pipelineConstraints, this.bindGroupConstraints, Math.ceil(cl[0][1]- cl[0][0] / 64))
             this.device.queue.submit([encoder.finish()]);
 
             this.device.queue.writeBuffer(this.bufferGraphColoringLimits, 0, cl[1]);
-            encoder = this.gpuCompute(this.pipelineConstraints, this.bindGroupConstraints, Math.ceil(cl[1][1]- cl[1][0] / 64))
+            encoder = this.gpuCompute(encoder, this.pipelineConstraints, this.bindGroupConstraints, Math.ceil(cl[1][1]- cl[1][0] / 64))
             this.device.queue.submit([encoder.finish()]);
 
             this.device.queue.writeBuffer(this.bufferGraphColoringLimits, 0, cl[2]);
-            encoder = this.gpuCompute(this.pipelineConstraints, this.bindGroupConstraints, Math.ceil(cl[2][1]- cl[2][0] / 64))
+            encoder = this.gpuCompute(encoder, this.pipelineConstraints, this.bindGroupConstraints, Math.ceil(cl[2][1]- cl[2][0] / 64))
             this.device.queue.submit([encoder.finish()]);
 
             this.device.queue.writeBuffer(this.bufferGraphColoringLimits, 0, cl[3]);
-            encoder = this.gpuCompute(this.pipelineConstraints, this.bindGroupConstraints, Math.ceil(cl[3][1]- cl[3][0] / 64))
+            encoder = this.gpuCompute(encoder, this.pipelineConstraints, this.bindGroupConstraints, Math.ceil(cl[3][1]- cl[3][0] / 64))
             this.device.queue.submit([encoder.finish()]);
 
             // encoder = this.gpuCompute(this.pipelineAddCorrection, this.bindGroupCorrections, Math.ceil(o.pos.length/3 / 64))
             // this.device.queue.submit([encoder.finish()]);
 
-            encoder = this.gpuCompute(this.pipelineVelocityUpdate, this.bindGroupIterate, Math.ceil(o.pos.length/3 / 64))
-
-            if(t==99)encoder.copyBufferToBuffer(this.posIOBuffer, 0, this.resultBuffer, 0, this.resultBuffer.size);
-        
-            this.device.queue.submit([encoder.finish()]);
+            encoder = this.gpuCompute(encoder, this.pipelineVelocityUpdate, this.bindGroupVelocityUpdate, Math.ceil(o.pos.length/3 / 64))
         }
+        encoder.copyBufferToBuffer(this.posIOBuffer, 0, this.resultBuffer, 0, this.resultBuffer.size);
+        
+        this.device.queue.submit([encoder.finish()]);
         await this.resultBuffer.mapAsync(GPUMapMode.READ);
         o.pos.set(new Float32Array(this.resultBuffer.getMappedRange()));
         this.resultBuffer.unmap();

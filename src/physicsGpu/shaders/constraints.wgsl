@@ -20,7 +20,7 @@
     let index = graphColor[limits.x + id.x];
 
     let dt: f32 = 1.0 / 60.0/50; 
-    let alpha = 0.00000001/dt/dt;
+    let alpha = 0.000000001;//dt/dt;
     
     let c0 = constStart[index]/3;
     let c1 = constEnd[index]/3;

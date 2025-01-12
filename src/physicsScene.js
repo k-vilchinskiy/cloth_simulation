@@ -30,10 +30,10 @@ var physicsScene = {
 }
 
 function addPlane(x,y,z, color){
-    let geometry = new PlaneGeometry(4,4,150,150)
-    geometry.rotateX(Math.PI/2)
+    let geometry = new PlaneGeometry(4,4,30,30)
+    //geometry.rotateX(Math.PI/2)
     geometry.translate(x,y,z)
-    geometry.rotateY(Math.PI/2)
+    //geometry.rotateY(Math.PI/2)
     
     let material = new MeshPhongMaterial({
         color: color,
@@ -45,9 +45,9 @@ function addPlane(x,y,z, color){
     let mesh = new Mesh(geometry, material)
     threeScene.add(mesh)
     let obj = new ConstraintBody(geometry)
-    // for(var z = 2; z < obj.pos.length; z+=3){
-    //     obj.pos[z] += Math.random()/100
-    // }
+     for(var z = 2; z < obj.pos.length; z+=3){
+         obj.pos[z] += Math.random()/100
+     }
     obj.mass[0] = 0.0
     // obj.pos[0] = -0.1
     // obj.pos[1] = 1
